@@ -1,0 +1,188 @@
+---------------------------------------------------------------------------
+--
+-- intset.sql-
+--
+--
+-- Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
+-- Portions Copyright (c) 1994, Regents of the University of California
+--
+-- src/tutorial/intset.source
+--
+---------------------------------------------------------------------------
+
+-----------------------------
+-- Creating a new type:
+--	We are going to create a new type called 'intset'.
+--	A user-defined type must have an input and an output function.
+--	All of these are usually user-defined C functions.
+-----------------------------
+
+-- Assume the user defined functions are in _OBJWD_/intset$DLSUFFIX
+-- (we do not want to assume this is in the dynamic loader search path).
+-- Look at $PWD/intset.c for the source.  Note that we declare all of
+-- them as STRICT, so we do not need to cope with NULL inputs in the
+-- C code.  We also mark them IMMUTABLE, since they always return the
+-- same outputs given the same inputs.
+
+-- the input function 'intset_in' takes a null-terminated string (the
+-- textual representation of the type) and turns it into the internal
+-- (in memory) representation. You will get a message telling you 'intset'
+-- does not exist yet but that's okay.
+
+CREATE FUNCTION intset_in(cstring)
+   RETURNS intset
+   AS '_OBJWD_/intset'
+   LANGUAGE C IMMUTABLE STRICT;
+
+-- the output function 'intset_out' takes the internal representation and
+-- converts it into the textual representation.
+
+CREATE FUNCTION intset_out(intset)
+   RETURNS cstring
+   AS '_OBJWD_/intset'
+   LANGUAGE C IMMUTABLE STRICT;
+
+
+-- now, we can create the type. The internallength specifies the size of the
+-- memory block required to hold the type (we need two 8-byte doubles).
+
+CREATE TYPE intset (
+   internallength = VARIABLE,
+   input = intset_in,
+   output = intset_out,
+   alignment = int4
+);
+
+
+-----------------------------
+-- Using the new type:
+--	user-defined types can be used like ordinary built-in types.
+-----------------------------
+
+CREATE FUNCTION intset_check_contain(int, intset)
+   RETURNS bool
+   AS '_OBJWD_/intset'
+   LANGUAGE C IMMUTABLE STRICT;
+
+CREATE OPERATOR ? (
+   leftarg = int,
+   rightarg = intset,
+   procedure = intset_check_contain,
+   commutator = ?
+);
+
+
+CREATE FUNCTION intset_length(intset)
+   RETURNS INT
+   AS '_OBJWD_/intset'
+   LANGUAGE C IMMUTABLE STRICT;
+
+CREATE OPERATOR # (
+   rightarg = intset,
+   procedure = intset_length
+);
+
+
+CREATE FUNCTION intset_superset(intset, intset)
+   RETURNS bool
+   AS '_OBJWD_/intset'
+   LANGUAGE C IMMUTABLE STRICT;
+
+CREATE OPERATOR >@ (
+   leftarg = intset,
+   rightarg = intset,
+   procedure = intset_superset,
+   commutator = >@
+);
+
+
+CREATE FUNCTION intset_subset(intset, intset)
+   RETURNS bool
+   AS '_OBJWD_/intset'
+   LANGUAGE C IMMUTABLE STRICT;
+
+CREATE OPERATOR @< (
+   leftarg = intset,
+   rightarg = intset,
+   procedure = intset_subset,
+   commutator = @<
+);
+
+
+CREATE FUNCTION intset_equal(intset, intset)
+   RETURNS bool
+   AS '_OBJWD_/intset'
+   LANGUAGE C IMMUTABLE STRICT;
+
+CREATE OPERATOR = (
+   leftarg = intset,
+   rightarg = intset,
+   procedure = intset_equal,
+   commutator = =
+);
+
+
+CREATE FUNCTION intset_not_equal(intset, intset)
+   RETURNS bool
+   AS '_OBJWD_/intset'
+   LANGUAGE C IMMUTABLE STRICT;
+
+CREATE OPERATOR <> (
+   leftarg = intset,
+   rightarg = intset,
+   procedure = intset_not_equal,
+   commutator = <>
+);
+
+
+CREATE FUNCTION intset_union(intset, intset)
+   RETURNS intset
+   AS '_OBJWD_/intset'
+   LANGUAGE C IMMUTABLE STRICT;
+
+CREATE OPERATOR || (
+   leftarg = intset,
+   rightarg = intset,
+   procedure = intset_union,
+   commutator = ||
+);
+
+
+CREATE FUNCTION intset_intersection(intset, intset)
+   RETURNS intset
+   AS '_OBJWD_/intset'
+   LANGUAGE C IMMUTABLE STRICT;
+
+CREATE OPERATOR && (
+   leftarg = intset,
+   rightarg = intset,
+   procedure = intset_intersection,
+   commutator = &&
+);
+
+
+CREATE FUNCTION intset_disjunction(intset, intset)
+   RETURNS intset
+   AS '_OBJWD_/intset'
+   LANGUAGE C IMMUTABLE STRICT;
+
+CREATE OPERATOR !! (
+   leftarg = intset,
+   rightarg = intset,
+   procedure = intset_disjunction,
+   commutator = !!
+);
+
+
+CREATE FUNCTION intset_difference(intset, intset)
+   RETURNS intset
+   AS '_OBJWD_/intset'
+   LANGUAGE C IMMUTABLE STRICT;
+
+CREATE OPERATOR - (
+   leftarg = intset,
+   rightarg = intset,
+   procedure = intset_difference,
+   commutator = -
+);
+
